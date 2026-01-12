@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>퀴즈 앱</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2rem;
+        }
+
+        .progress-container {
+            background: #e0e0e0;
+            border-radius: 10px;
+            height: 10px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+
+        .question-container {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 25px;
+        }
+
+        .question-number {
+            color: #667eea;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .question-text {
+            font-size: 1.3rem;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .answer-input {
+            width: 100%;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            outline: none;
+            transition: border-color 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .answer-input:focus {
+            border-color: #667eea;
+        }
+
+        .answer-input.correct {
+            border-color: #4caf50;
+            background: #e8f5e9;
+        }
+
+        .answer-input.incorrect {
+            border-color: #f44336;
+            background: #ffebee;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-submit {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-next {
+            background: linear-gradient(90deg, #4caf50, #45a049);
+            color: white;
+        }
+
+        .btn-restart {
+            background: linear-gradient(90deg, #ff9800, #f57c00);
+            color: white;
+        }
+
+        .feedback {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+            display: none;
+        }
+
+        .feedback.correct {
+            background: #e8f5e9;
+            color: #2e7d32;
+            display: block;
+        }
+
+        .feedback.incorrect {
+            background: #ffebee;
+            color: #c62828;
+            display: block;
+        }
+
+        .correct-answer {
+            color: #1565c0;
+            margin-top: 10px;
+            font-weight: normal;
+        }
+
+        .result-container {
+            text-align: center;
+        }
+
+        .result-score {
+            font-size: 4rem;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+        }
+
+        .result-text {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+            padding: 40px;
+        }
+
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            text-align: center;
+            color: #c62828;
+            padding: 40px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-group .btn {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>퀴즈</h1>
+
+        <div id="loading" class="loading">
+            <div class="loading-spinner"></div>
+            <p>문제를 불러오는 중...</p>
+        </div>
+
+        <div id="error" class="error hidden">
+            <p>문제를 불러오는데 실패했습니다.</p>
+            <p>스프레드시트가 공개되어 있는지 확인해주세요.</p>
+        </div>
+
+        <div id="quiz" class="hidden">
+            <div class="progress-text" id="progressText">1 / 10</div>
+            <div class="progress-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+
+            <div class="question-container">
+                <div class="question-number" id="questionNumber">문제 1</div>
+                <div class="question-text" id="questionText"></div>
+            </div>
+
+            <input type="text" class="answer-input" id="answerInput" placeholder="답을 입력하세요" autocomplete="off">
+
+            <div class="feedback" id="feedback">
+                <span id="feedbackText"></span>
+                <div class="correct-answer" id="correctAnswer"></div>
+            </div>
+
+            <div id="submitBtnContainer">
+                <button class="btn btn-submit" id="submitBtn">제출</button>
+            </div>
+
+            <div id="afterSubmitBtns" class="btn-group hidden">
+                <button class="btn btn-next" id="nextBtn">다음 문제</button>
+            </div>
+        </div>
+
+        <div id="result" class="result-container hidden">
+            <h2>퀴즈 완료!</h2>
+            <div class="result-score" id="resultScore">0%</div>
+            <div class="result-text" id="resultText">10문제 중 0문제 정답</div>
+            <button class="btn btn-restart" id="restartBtn">다시 시작</button>
+        </div>
+    </div>
+
+    <script>
+        // ============ 설정 ============
+        // 방법 1: Google Sheets 직접 접근 (스프레드시트 공개 필요)
+        const SHEET_ID = '1AcDCxushLIlvpmvBmy5KEvDllsYthss4hRgX59tvOGk';
+        const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+
+        // 방법 2: Apps Script 웹앱 URL (배포 후 아래 URL 입력)
+        // Apps Script 배포 후 받은 URL을 여기에 입력하세요
+        const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzGqpIXNXw7CIljtljoGFt1HQh8BXVcHZQo0rr-bauQ2K4kwYiL7a_CGZPcmkzxA3pz/exec'; // 예: 'https://script.google.com/macros/s/xxx/exec'
+
+        let quizData = [];
+        let currentQuestion = 0;
+        let score = 0;
+        let answered = false;
+
+        const loadingEl = document.getElementById('loading');
+        const errorEl = document.getElementById('error');
+        const quizEl = document.getElementById('quiz');
+        const resultEl = document.getElementById('result');
+        const progressText = document.getElementById('progressText');
+        const progressBar = document.getElementById('progressBar');
+        const questionNumber = document.getElementById('questionNumber');
+        const questionText = document.getElementById('questionText');
+        const answerInput = document.getElementById('answerInput');
+        const feedback = document.getElementById('feedback');
+        const feedbackText = document.getElementById('feedbackText');
+        const correctAnswer = document.getElementById('correctAnswer');
+        const submitBtn = document.getElementById('submitBtn');
+        const submitBtnContainer = document.getElementById('submitBtnContainer');
+        const afterSubmitBtns = document.getElementById('afterSubmitBtns');
+        const nextBtn = document.getElementById('nextBtn');
+        const resultScore = document.getElementById('resultScore');
+        const resultText = document.getElementById('resultText');
+        const restartBtn = document.getElementById('restartBtn');
+
+        // Apps Script 웹앱에서 데이터 로드
+        async function loadFromAppsScript() {
+            const response = await fetch(SCRIPT_URL);
+            const result = await response.json();
+            if (!result.success) throw new Error(result.error);
+            return result.data;
+        }
+
+        // Google Sheets에서 직접 데이터 로드
+        async function loadFromSheets() {
+            const response = await fetch(SHEET_URL);
+            const text = await response.text();
+            const jsonString = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);?/);
+            if (!jsonString) throw new Error('Invalid response format');
+
+            const data = JSON.parse(jsonString[1]);
+            return data.table.rows
+                .filter(row => row.c && row.c[0] && row.c[0].v)
+                .map(row => ({
+                    question: row.c[0]?.v || '',
+                    answer: row.c[1]?.v?.toString() || ''
+                }))
+                .filter(item => item.question && item.answer);
+        }
+
+        async function loadData() {
+            try {
+                // SCRIPT_URL이 설정되어 있으면 Apps Script 사용, 아니면 Sheets 직접 접근
+                if (SCRIPT_URL) {
+                    quizData = await loadFromAppsScript();
+                } else {
+                    quizData = await loadFromSheets();
+                }
+
+                if (quizData.length === 0) throw new Error('No data found');
+
+                shuffleArray(quizData);
+                loadingEl.classList.add('hidden');
+                quizEl.classList.remove('hidden');
+                showQuestion();
+            } catch (error) {
+                console.error('Error loading data:', error);
+                loadingEl.classList.add('hidden');
+                errorEl.classList.remove('hidden');
+            }
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function showQuestion() {
+            const q = quizData[currentQuestion];
+            progressText.textContent = `${currentQuestion + 1} / ${quizData.length}`;
+            progressBar.style.width = `${((currentQuestion + 1) / quizData.length) * 100}%`;
+            questionNumber.textContent = `문제 ${currentQuestion + 1}`;
+            questionText.textContent = q.question;
+            answerInput.value = '';
+            answerInput.className = 'answer-input';
+            answerInput.disabled = false;
+            answerInput.focus();
+            feedback.className = 'feedback';
+            feedbackText.textContent = '';
+            correctAnswer.textContent = '';
+            submitBtnContainer.classList.remove('hidden');
+            afterSubmitBtns.classList.add('hidden');
+            answered = false;
+        }
+
+        function checkAnswer() {
+            if (answered) return;
+            const userAnswer = answerInput.value.trim();
+            if (!userAnswer) {
+                answerInput.focus();
+                return;
+            }
+            answered = true;
+            const correctAns = quizData[currentQuestion].answer;
+            const isCorrect = normalizeAnswer(userAnswer) === normalizeAnswer(correctAns);
+
+            if (isCorrect) {
+                score++;
+                answerInput.className = 'answer-input correct';
+                feedback.className = 'feedback correct';
+                feedbackText.textContent = '정답입니다!';
+            } else {
+                answerInput.className = 'answer-input incorrect';
+                feedback.className = 'feedback incorrect';
+                feedbackText.textContent = '틀렸습니다.';
+                correctAnswer.textContent = `정답: ${correctAns}`;
+            }
+
+            answerInput.disabled = true;
+            submitBtnContainer.classList.add('hidden');
+            afterSubmitBtns.classList.remove('hidden');
+            if (currentQuestion === quizData.length - 1) {
+                nextBtn.textContent = '결과 보기';
+            }
+        }
+
+        function normalizeAnswer(str) {
+            return str.toLowerCase().replace(/\s+/g, '').replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '');
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            if (currentQuestion >= quizData.length) {
+                showResult();
+            } else {
+                showQuestion();
+            }
+        }
+
+        function showResult() {
+            quizEl.classList.add('hidden');
+            resultEl.classList.remove('hidden');
+            const percentage = Math.round((score / quizData.length) * 100);
+            resultScore.textContent = `${percentage}%`;
+            resultText.textContent = `${quizData.length}문제 중 ${score}문제 정답`;
+        }
+
+        function restart() {
+            currentQuestion = 0;
+            score = 0;
+            shuffleArray(quizData);
+            resultEl.classList.add('hidden');
+            quizEl.classList.remove('hidden');
+            nextBtn.textContent = '다음 문제';
+            showQuestion();
+        }
+
+        submitBtn.addEventListener('click', checkAnswer);
+        nextBtn.addEventListener('click', nextQuestion);
+        restartBtn.addEventListener('click', restart);
+        answerInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                if (!answered) checkAnswer();
+                else nextQuestion();
+            }
+        });
+
+        loadData();
+    </script>
+</body>
+</html>
